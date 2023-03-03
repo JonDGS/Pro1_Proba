@@ -10,8 +10,10 @@ Template con lectura de datos en archivo csv
 
 import numpy as np
 import math as mt
+from scipy import stats
 import matplotlib.pyplot as plt
-from matplotlib import style 
+from matplotlib import style
+import matplotlib.cbook as cbook
 
 def loadData():
     #input_dir='C:/Users/PATH/' #PATH al archivo de datos, cambiar según cada computadora. Sirve para evitar 'File not found'
@@ -136,10 +138,15 @@ def calculateSampleRange(dataArraySorted):
 def calculateQuantileRange(Q1, Q3):
     return Q3 - Q1
 
+def calculateMode(dataArray):
+
+    return stats.mode(dataArray)
+
 def printValues(valuesObtained):
     print("Datos has the following values\n"
           + "Average: " + str(valuesObtained['average']) + "\n"
           + "Median: " + str(valuesObtained['median']) + "\n"
+          + "Mode: " + str(valuesObtained['mode']) + "\n"
           + "Q1: " + str(valuesObtained['quantiles'][0]) + "\n"
           + "Q3: " + str(valuesObtained['quantiles'][1]) + "\n"
           + "Variance: " + str(valuesObtained['variance']) + "\n"
@@ -148,7 +155,10 @@ def printValues(valuesObtained):
           + "Sample Range: " + str(valuesObtained['sampleRange']) + "\n"
           + "Quantile Range: " + str(valuesObtained['quantileRange']) + "\n")
     
-def histogram(dataArray, sampleRange):
+#Builds the histogram using humidity data found in dataArray
+#The number of clases or bars are calculated by numOfClases
+#By calculating the square root of the total number of data
+def makeHistogram(dataArray, sampleRange):
 
     numOfClases = (mt.ceil(np.sqrt(len(dataArray))))
 
@@ -159,13 +169,48 @@ def histogram(dataArray, sampleRange):
     style.use('bmh')
     plt.xlabel("Porcentaje de Humedad")
     plt.ylabel("Frecuencia de mediciones")
-    plt.title("Humedad presente en el baño")
+    plt.title("Histograma")
     plt.xticks(ticks=bins)
     plt.show(block=False)
 
+    
+#Builds a box plot using humidity data
+#We used this function to found outlier data
+#Sort the values in ascending order
+#Calculates Q1,Q2,Q3 and the limits of the boxplot the same way we calculate this values   in class
+def makeBoxplot(dataArray):
     plt.figure(figsize=(20,10))
     
-    plt.boxplot(dataArray)
+    boxplot = plt.boxplot(dataArray, vert=True, showmeans=True)
+
+    caps = boxplot['caps']
+    med = boxplot['medians'][0]
+
+    capbottom = caps[0].get_ydata()[0]
+    captop = caps[1].get_ydata()[0]
+
+    median = med.get_ydata()[1]
+
+    pc25 = boxplot['boxes'][0].get_ydata().min()
+    pc75 = boxplot['boxes'][0].get_ydata().max()
+
+    xpos = med.get_xdata()
+    xoff = 0.10 * (xpos[1] - xpos[0])
+    xlabel = xpos[1] + xoff
+
+    plt.text(xlabel, median,
+            'Median = {:6.3g}'.format(median), va='center')
+    plt.text(xlabel, pc25,
+            '25th percentile = {:6.3g}'.format(pc25), va='center')
+    plt.text(xlabel, pc75,
+            '75th percentile = {:6.3g}'.format(pc75), va='center')
+    plt.text(xlabel, capbottom,
+            'Bottom cap = {:6.3g}'.format(capbottom), va='center')
+    plt.text(xlabel, captop,
+            'Top cap = {:6.3g}'.format(captop), va='center')
+    
+    plt.ylabel("Porcentaje de Humedad")
+    plt.title("Diagrama de Cajas")
 
     style.use('bmh')
     plt.show()
@@ -198,6 +243,9 @@ def calculateStatistics(printResults):
     #Calcular mediana
     valuesObtained['median'] = calculateMedian(dataArraySorted)
 
+    #Calcular moda
+    valuesObtained['mode'] = calculateMode(dataArraySorted)
+
     #Calcular Quartiles
     valuesObtained['quantiles'] = calculateQuartiles(dataArraySorted, "manual")
 
@@ -222,7 +270,10 @@ def calculateStatistics(printResults):
         printValues(valuesObtained)
 
     #Realizar histograma
-    histogram(dataArraySorted, valuesObtained['sampleRange'])
+    makeHistogram(dataArraySorted, valuesObtained['sampleRange'])
+
+    #Realizar diagrama de Cajas
+    makeBoxplot(dataArraySorted)
 
     return valuesObtained
 
